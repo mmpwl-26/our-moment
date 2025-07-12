@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Countdown</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: black;
+      color: #f0f0f0;
+      font-family: monospace;
+      height: 100vh;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    .countdown {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 20vw;
+      color: pink;
+      font-weight: bold;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .warp-effect {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      animation: heartWarp 5s ease-out forwards;
+      background: transparent;
+    }
+
+    .warp-effect::before {
+      content: '\2764';
+      font-size: 70vw;
+      animation: pulse 1s infinite;
+      color: red;
+    }
+
+    @keyframes heartWarp {
+      0% {
+        transform: scale(0.2);
+        opacity: 0;
+      }
+      30% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(20);
+        opacity: 0;
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+    }
+
+    .gallery-overlay, .letter, .warp-effect, .envelope, .popup, .qr-final {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      z-index: 999;
+    }
+
+    .gallery-overlay {
+      background-color: #FFF0F5;
+      
+    }
+
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      max-width: 100vw;
+      max-height: 90vh;
+    }
+
+    .gallery img {
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      cursor: pointer;
+      border: 2px solid #FFB6C1;
+    }
+    .gallery-message {
+      font-size: 1.3rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+      color: #000;
+      text-align: center;
+    }
+
+    .popup{background:rgba(0,0,0,.8);padding:20px}
+    .popup-inner{display:flex;align-items:center;justify-content:center}
+    .popup img{max-width:80vw;max-height:80vh;border:4px solid #fff}
+
+    .nav-button{
+      background:rgba(255,255,255,.1);
+      border:none;
+      font-size:2.5rem;
+      cursor:pointer;
+      color:#fff;
+      padding:10px;
+      z-index:1000;
+    }
+    .nav-button.left{margin-right:10px}
+    .nav-button.right{margin-left:10px}
+
+    #closePopup{
+      margin-top:20px;
+      background: #FF7F50 (255,255,255,.2);
+      color:red;
+      font-size:1.3rem;
+      border:none;
+      padding:10px 20px;
+      border-radius:8px;
+      cursor:pointer;
+    }
+
+    .letter-content {
+      color: rgb(0, 0, 0);
+      font-size: 1.5rem;
+      padding: 2rem;
+      max-width: 600px;
+      text-align: center;
+    }
+
+    .envelope img {
+      width: 150px;
+      height: auto;
+      cursor: pointer;
+    }
+
+    .qr-final img {
+      width: 200px;
+      height: auto;
+    }
+
+    /* กระดาษจดหมายเลื่อนขึ้น */
+    .letter {
+      background: rgba(255, 255, 255, 0.9);
+
+      padding: 2rem;
+      border-radius: 10px;
+      max-width: 700px;
+      max-height: 80vh;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      overflow-y: auto;
+      z-index: 10000;
+      color: rgb(0, 0, 0);
+      font-size: 1.5rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="matrix"></canvas>
+  <div class="countdown" id="countdown">5</div>
+
+  <div class="warp-effect" id="warpEffect"></div>
+
+  <div class="gallery-overlay" id="galleryOverlay">
+  <!-- ✅ ข้อความนำ -->
+  <div class="gallery-message">ดูรูปใหญ่ได้เด้อค่าา 🩷</div>
+
+  <!-- ✅ แกลเลอรี่ -->
+  <div class="gallery" id="gallery"></div>
+</div>
+
+   <div class="popup" id="popup">
+    <div class="popup-inner">
+      <button id="prevImage" class="nav-button left">⬅️</button>
+      <img id="popupImage" src="" alt="Popup Image">
+      <button id="nextImage" class="nav-button right">➡️</button>
+    </div>
+    <button id="closePopup">ปิด</button>
+  </div>
+
+  <div class="envelope" id="envelope">
+    <img
+      src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExdmw4Ym84emZieXFyNjdlaWp3cTBrb2ZoeDJxY2ozM2pmZnYwYXdxNiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/r14mSsWOTdlPQqqONs/giphy.gif"
+      alt="Open Letter"
+      class="envelope-img"
+      id="openLetter"
+    />
+  </div>
+
+  <div class="letter" id="letter">
+    <div class="letter-content">
+      <p>Happy mensiversary 3 months ˗ˋˏ♡ˎˊ˗ </p>
+      <p>
+        หวัดดี!ไอ้ตัวแสบ จดหมายนี้เป็นจดหมายของหนูเอง ก่อนอื่นเลย ขอโทษด้วยน้ากับเรื่องเล็กๆน้อยๆทุกอย่างที่ทำให้พี่เหนื่อย
+        ไม่ว่าจะเรื่องความสัมพันธ์ เรื่องนู้นเรื่องนี่ พี่เองก็คงจะเหนื่อยมากๆเหมือนกันหนูขอบคุณมากๆเลยน้า ไม่รู้จดหมายนี้จะซึ้งมั้ย
+        ในวันที่พี่เหนื่อยมากๆกับความสัมพันธ์ วันที่พี่มั่นใจว่าจะไม่อดทนกับมันแล้ว ขอให้พี่นั่งทบทวนกับความคิดนั้นก่อนนะ ในวันที่เราเหนื่อยมากๆการตัดสินใจที่พลาดที่สุดคือการไม่นั่งทบทวน
+        หนูเองก็เหมือนกัน เราต่างมีเหตุการณ์ที่ประทับใจ และไม่ประทับใจเลยอยากให้นั่งทบทวนก่อนที่เราทั้งคู่จะตัดสินใจ ทำมันด้วยกันนะ🩷
+        อีกอย่างสำหรับหนูตอนนี้ที่สร้างบาดแผลให้พี่เยอะแยะ ที่ยากจะเอาทุกอย่างกลับมาได้เหมือนเดิม อยากจะบอกกับพี่ว่า
+        ต่อให้พี่จะอยู่ไกลแค่ไหน ต่อให้วันนี้ พรุ่งนี้ หรือวันไหนๆที่หนูต้องเจอคนอีกเยอะแยะมากมาย หนูไม่อยากให้พี่กังวลอะไรทั้งนั้น
+        เพราะหนูจะอยู่ตรงนี้กับพี่แน่นอน ไม่ว่าจะทุกข์หรือสุขมุกก็จะอยู่กับพี่ หนูจะทำให้พี่กลับมาเป็นพี่คนเดิม คนที่ไม่ต้องเสียใจ
+        คนที่ไม่ต้องระแวงอะไร หนูไม่ได้ทำเพราะหน้าที่แต่ทำเพื่ออนาคตของเรา ในทุกวันที่คนรอบตัวพี่คิดว่าพี่รักหนูมากที่สุด หนูเองก็จะทำให้ทุกคนรู้เหมือนกันว่าหนูก็รักพี่มากที่สุด
+        หนูรู้ว่าการได้รับแบบที่ไม่ต้องร้องขอมันคงรู้สึกดีกว่าที่ต้องมาคอยบอก ขอโทษมากๆเลยกับช่วงเวลาที่ผ่านมา ไม่อยากให้พี่คิดว่ามุกไม่รักพี่เลย เพราะมุกก็คงตอบได้เต็มปากว่ามุกรักพี่มากกว่ารักตัวเองอีก  :)
+      </p>
+      <p>รักนะ 💖</p>
+
+      <button onclick="endSequence()">꒰•◡̎•꒱</button>
+    </div>
+  </div>
+
+  <div class="qr-final" id="qrFinal">
+    <img src="https://i.postimg.cc/h4Jrf92q/1.png" alt="QR Code" />
+  </div>
+
+  <audio id="bgMusic" src="https://media.vocaroo.com/mp3/17CpvzBwxUtq" loop></audio>
+
+  <script>
+    // Matrix effect
+    const canvas = document.getElementById('matrix');
+    const ctx = canvas.getContext('2d');
+    canvas.height = window.innerHeight;
+    canvas.width = window.innerWidth;
+
+    const words = [
+      'H',
+      'A',
+      'P',
+      'P',
+      'Y',
+      ' ',
+      'M',
+      'E',
+      'N',
+      'S',
+      'I',
+      'V',
+      'E',
+      'R',
+      'S',
+      'A',
+      'R',
+      'Y',
+      '3',
+      ' ',
+      'M',
+      'O',
+      'N',
+      'T',
+      'H',
+      'S',
+    ];
+
+    const fontSize = 16;
+    const columns = canvas.width / fontSize;
+    const drops = Array.from({ length: columns }, () => 1);
+
+    function drawMatrix() {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#f0f0f0';
+      ctx.font = fontSize + 'px monospace';
+
+      for (let i = 0; i < drops.length; i++) {
+        const text = words[Math.floor(Math.random() * words.length)];
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+          drops[i] = 0;
+        }
+        drops[i]++;
+      }
+    }
+    setInterval(drawMatrix, 33);
+
+    const countdownEl = document.getElementById('countdown');
+    const warpEffect = document.getElementById('warpEffect');
+    const galleryOverlay = document.getElementById('galleryOverlay');
+    const gallery = document.getElementById('gallery');
+    const popup = document.getElementById('popup');
+    const popupImage = document.getElementById('popupImage');
+    const closePopup = document.getElementById('closePopup');
+    const prevImage = document.getElementById('prevImage');
+    const nextImage = document.getElementById('nextImage');
+    const envelope = document.getElementById('envelope');
+    const openLetterBtn = document.getElementById('openLetter');
+    const letter = document.getElementById('letter');
+    const qrFinal = document.getElementById('qrFinal');
+    const bgMusic = document.getElementById('bgMusic');
+
+    const imageSources = [
+      'https://i.postimg.cc/YC38MvVT/21-E2904-B-1-BBE-4-DFB-A9-EC-E45-FC9-BBCB23.jpg',
+      'https://i.postimg.cc/8z2C1gXv/85-D6-B864-DEAB-4-A14-A05-C-ED0-F26-E77-F69.jpg',
+      'https://i.postimg.cc/1RbR0QPj/IMG-0206.jpg',
+      'https://i.postimg.cc/8cqHZ3cS/3-FF11060-BF8-F-4-DA3-A082-0-A438-CD87-B5-A.jpg',
+      'https://i.postimg.cc/1zfKZsFQ/IMG-4116.jpg',
+      'https://i.postimg.cc/TP5yQSrQ/IMG-7029.jpg',
+      'https://i.postimg.cc/MppWqKYX/S-9314321.jpg',
+      'https://i.postimg.cc/LXZw2G7J/2568-04-27-175928.jpg',
+      'https://i.postimg.cc/hGVDXq8F/IMG-4152.jpg',
+      'https://i.postimg.cc/XYFV1yHS/LINE-ALBUM-11-04-68-250521-1.jpg',
+      'https://i.postimg.cc/Df9frg6d/LINE-ALBUM-18-05-68-250521-1.jpg',
+      'https://i.postimg.cc/T14tb1gC/S-9314309-0.jpg',
+      'https://i.postimg.cc/DwsxW2ZP/S-9314319-0.jpg',
+      'https://i.postimg.cc/2jKG2qLx/S-9314317-0.jpg',
+      'https://i.postimg.cc/50t5m1xG/S-9314308-0.jpg',
+      'https://i.postimg.cc/FsSypT49/S-9314306-0.jpg',
+      'https://i.postimg.cc/xd6Fv9rJ/S-9314315-0.jpg',
+      'https://i.postimg.cc/FKCDfGc0/S-9314310-0.jpg',
+      'https://i.postimg.cc/2S8Q4hCG/S-9314312-0.jpg',
+      'https://i.postimg.cc/JhSjVFZY/S-9314311-0.jpg',
+    ];
+
+    let countdownNumber = 5;
+    let currentIndex = 0;
+
+    function triggerWarpAndShowGallery() {
+      warpEffect.style.display = 'flex';
+      setTimeout(() => {
+        warpEffect.style.display = 'none';
+        showGallery();
+      }, 5000);
+    }
+
+    const countdownInterval = setInterval(() => {
+      countdownNumber--;
+      if (countdownNumber === 0) {
+        countdownEl.textContent = '';
+        clearInterval(countdownInterval);
+        setTimeout(triggerWarpAndShowGallery, 1000);
+      } else {
+        countdownEl.textContent = countdownNumber;
+      }
+    }, 1000);
+
+    function showGallery() {
+      galleryOverlay.style.display = 'flex';
+      gallery.innerHTML = '';
+      imageSources.forEach((src, index) => {
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = `Image ${index + 1}`;
+        img.addEventListener('click', () => {
+          currentIndex = index;
+          updatePopupImage();
+          popup.style.display = 'flex';
+
+          if (bgMusic.paused) {
+            bgMusic.play().catch((e) => console.log('Autoplay error:', e));
+          }
+        });
+        gallery.appendChild(img);
+      });
+    }
+
+    function updatePopupImage() {
+      popupImage.src = imageSources[currentIndex];
+      closePopup.style.display =
+        currentIndex === imageSources.length - 1 ? 'block' : 'none';
+    }
+
+    prevImage.addEventListener('click', () => {
+      if (currentIndex > 0) {
+        currentIndex--;
+        updatePopupImage();
+      }
+    });
+
+    nextImage.addEventListener('click', () => {
+      if (currentIndex < imageSources.length - 1) {
+        currentIndex++;
+        updatePopupImage();
+      }
+    });
+
+    closePopup.addEventListener('click', () => {
+      popup.style.display = 'none';
+      galleryOverlay.style.display = 'none';
+      // แสดงซองจดหมายหลังปิดแกลเลอรี่
+      envelope.style.display = 'flex';
+    });
+
+    openLetterBtn.addEventListener('click', () => {
+      // ซ่อนซองจดหมาย แล้วแสดงกระดาษจดหมาย
+      envelope.style.display = 'none';
+      letter.style.display = 'flex';
+    });
+
+    function endSequence() {
+      bgMusic.pause();
+      bgMusic.currentTime = 0;
+      letter.style.display = 'none';
+      document.body.style.background = 'black';
+      qrFinal.style.display = 'flex';
+    }
+  </script>
+</body>
+</html>
